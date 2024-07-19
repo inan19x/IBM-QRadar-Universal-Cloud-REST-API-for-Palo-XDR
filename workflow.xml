@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Workflow name="Cortex XDR Get All Incidents" version="1.0" xmlns="http://qradar.ibm.com/UniversalCloudRESTAPI/Workflow/V1">
+
+    <Parameters>
+        <Parameter name="host" label="Host" required="true" />
+        <Parameter name="access_key_id" label="Access Key ID" required="true" />
+        <Parameter name="secret_key" label="API Key" required="true" secret="true" />
+    </Parameters>
+
+    <Actions>
+
+        <CallEndpoint url="https://${/host}/public_api/v1/incidents/get_incidents" method="POST" savePath="/events" >
+            <RequestHeader name="Content-Type" value="application/json" />
+            <RequestHeader name="Authorization" value="${/secret_key}" />
+            <RequestHeader name="x-xdr-auth-id" value="${/access_key_id}" />
+            <RequestHeader name="Host" value="${/host}" />
+            <RequestHeader name="Accept" value="application/json" />
+            <RequestBody type="application/json" encoding="UTF-8">{"request_data":{}}</RequestBody>
+        </CallEndpoint>
+
+        <!-- Post Event -->
+        <PostEvent path="/events" encoding="UTF-8" source="${/host}"/>
+
+    </Actions>
+
+    <Tests>
+        <DNSResolutionTest host="${/host}" />
+        <TCPConnectionTest host="${/host}" />
+        <SSLHandshakeTest host="${/host}" />
+        <HTTPConnectionThroughProxyTest url="${/host}/public_api/v1/incidents" expectedResponseStatus="404" />
+    </Tests>
+
+</Workflow>
