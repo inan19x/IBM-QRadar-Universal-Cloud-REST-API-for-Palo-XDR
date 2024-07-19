@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<WorkflowParameterValues xmlns="http://qradar.ibm.com/UniversalCloudRESTAPI/WorkflowParameterValues/V1">
+    <Value name="host"          value="<your_api_host>.paloaltonetworks.com" />
+    <Value name="access_key_id" value="<your_key_id>" />
+    <Value name="secret_key"    value="<your_secret_key>" />
+</WorkflowParameterValues>
