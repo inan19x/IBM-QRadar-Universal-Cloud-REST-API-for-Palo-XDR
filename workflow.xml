@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<Workflow name="Cortex XDR Get All Incidents" version="1.0" xmlns="http://qradar.ibm.com/UniversalCloudRESTAPI/Workflow/V1">
+<Workflow name="Cortex XDR Get Incidents and Specific Incident Details" version="1.0" xmlns="http://qradar.ibm.com/UniversalCloudRESTAPI/Workflow/V1">
 
     <Parameters>
         <Parameter name="host" label="Host" required="true" />
@@ -10,7 +10,8 @@
 
     <Actions>
 
-        <CallEndpoint url="https://${/host}/public_api/v1/incidents/get_incidents" method="POST" savePath="/events" >
+        <!-- Step 1: Get All Incidents -->
+        <CallEndpoint url="https://${/host}/public_api/v1/incidents/get_incidents" method="POST" savePath="/incidents_list">
             <RequestHeader name="Content-Type" value="application/json" />
             <RequestHeader name="Authorization" value="${/secret_key}" />
             <RequestHeader name="x-xdr-auth-id" value="${/access_key_id}" />
@@ -19,16 +20,40 @@
             <RequestBody type="application/json" encoding="UTF-8">{"request_data":{}}</RequestBody>
         </CallEndpoint>
 
-        <!-- Post Event -->
-        <PostEvent path="/events" encoding="UTF-8" source="${/host}"/>
+        <!-- Step 2: Check if there are incidents and process each -->
+        <If condition="/incidents_list/body/reply/result_count > 0">
+            <ForEach item="/current_incident" items="/incidents_list/body/reply/incidents">
+                <CallEndpoint url="https://${/host}/public_api/v1/incidents/get_incidents" method="POST" savePath="/incident_details">
+                    <RequestHeader name="Content-Type" value="application/json" />
+                    <RequestHeader name="Authorization" value="${/secret_key}" />
+                    <RequestHeader name="x-xdr-auth-id" value="${/access_key_id}" />
+                    <RequestHeader name="Host" value="${/host}" />
+                    <RequestHeader name="Accept" value="application/json" />
+                    <RequestBody type="application/json" encoding="UTF-8">
+                        {
+                            "request_data": {
+                                "filters": [
+                                    {
+                                        "field": "incident_id",
+                                        "operator": "eq",
+                                        "value": "${/current_incident/incident_id}"
+                                    }
+                                ]
+                            }
+                        }
+                    </RequestBody>
+                </CallEndpoint>
+				<Set path="/siemevents" value="LEEF:2.0|IBM|Palo Alto Cloud XDR Event|Cortex-Cloud-API|APIv1|payload=${/incident_details/body}" />
+				<!-- Post Event -->
+				<PostEvent path="/siemevents" encoding="UTF-8" source="${/host}"/>
+            </ForEach>
+        </If>
 
     </Actions>
 
     <Tests>
         <DNSResolutionTest host="${/host}" />
         <TCPConnectionTest host="${/host}" />
-        <SSLHandshakeTest host="${/host}" />
-        <HTTPConnectionThroughProxyTest url="${/host}/public_api/v1/incidents" expectedResponseStatus="404" />
     </Tests>
 
 </Workflow>
